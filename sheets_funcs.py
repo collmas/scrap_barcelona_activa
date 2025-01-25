@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 import json
 
@@ -5,10 +6,13 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
+load_dotenv()
+
 def get_credentials():
     google_credentials_json = os.getenv("GOOGLE_CREDENTIALS")
     credentials_info = json.loads(google_credentials_json)
-    credentials = Credentials.from_service_account_info(credentials_info)
+    SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    credentials = Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
     return gspread.authorize(credentials)
 
 def get_worksheet(key, sheet_num=0):
