@@ -36,9 +36,6 @@ def check_if_job_exists(dataframe, job, column="link"):
 def get_column_length(dataframe, column="link"):
     return len(dataframe.values.tolist())
 
-
-
-
 if __name__ == "__main__":
     
     dataframe = get_sheet_as_df(os.getenv("WORKSHEET_KEY"))
@@ -53,6 +50,3 @@ if __name__ == "__main__":
     dataframe.iloc[len(dataframe.values.tolist())] = ["testing", "link_Test"]
 
     print(f"checking if exists 'ee': {check_if_job_exists(dataframe, 'efe')}")
-
-
-    update_sheets(_worksheet, dataframe)
