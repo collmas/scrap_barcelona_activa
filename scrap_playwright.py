@@ -177,6 +177,7 @@ class CIDO_DIBA(JobScraper):
 
 
 if __name__ == "__main__":
+    #test
     js = BarcelonaActiva()
     js.get_jobs()
 
