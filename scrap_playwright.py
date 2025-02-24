@@ -20,14 +20,16 @@ class JobScraper:
     def obtenir_dades_sectors(self, url):
         with sync_playwright() as p:
             navegador = p.chromium.launch(headless=True)
-            pagina = navegador.new_page()
-            pagina.goto(url)
+            self.pagina = navegador.new_page()
+            self.pagina.goto(url)
             try:
-                pagina.wait_for_selector(self.wait_selector)
+                # self.pagina.wait_for_selector(self.wait_selector)
+                locator = self.pagina.locator(self.wait_selector)
+                locator.wait_for()
             except Exception as e:
                 print(e)
             
-            ofertes = pagina.query_selector_all(self.query_selector)
+            ofertes = self.pagina.query_selector_all(self.query_selector)
             dades = self.extreure_dades_ofertes(ofertes)
             
             return dades
@@ -74,6 +76,7 @@ class JobScraper:
         message = message + "</ul>Molta sort en la cerca!<br> <b>T'estim molt <3</b>"
         subject = f"Nova oferta a {self.job_scraper_name}!"
         sender.send_email(subject, message)
+
 
 class BarcelonaActiva(JobScraper):
     def __init__(self):
@@ -175,11 +178,70 @@ class CIDO_DIBA(JobScraper):
         if len(self.feines_noves) > 0:
             self.send_new_jobs()
 
+class TV3(JobScraper):
+    def __init__(self):
+        super().__init__()
+        self.URL_BASE = "https://seleccio.ccma.cat/seleccio/processos.jsf"
+        self.KEYWORDS = [
+            "v[íi]deo",
+            "audiovisual",
+            "producci[óo]",
+            "editor",
+            "m[uo]ntador",
+            "c[àa]m[ea]ra",
+            "cam[ea]r[òo]graf",
+            "documenta"
+        ]
+        self.KEYWORDS_PATTERNS = "(" + ")|(".join(self.KEYWORDS) + ")"  
+        self.worksheet = sheets_funcs.get_worksheet(os.getenv("WORKSHEET_KEY"), sheet_name=self.job_scraper_name) 
+        self.wait_selector = 'h3'
+        self.query_selector = 'h3'
+
+        self.URL_PATH="https://seleccio.ccma.cat/"
+
+
+    def extreure_dades_ofertes(self, ofertes):
+        dades = []
+        for oferta in ofertes:
+            titol = oferta.inner_text()
+            # link = oferta.get_attribute("href")
+            oferta_locator = self.pagina.locator(f"text={titol}")  # Buscamos por el texto del título
+            
+            # Buscamos el ancestro <a>
+            link_element = oferta_locator.locator("xpath=ancestor::a").first
+            link = self.transformar_link(link_element.get_attribute("href"))
+            if self.check_key_words(titol):
+                dades.append({
+                    "titol": titol,
+                    "link": link
+                })
+        return dades
+
+    def get_jobs(self):
+        print(f"Scraping {self.URL_BASE}...")
+        jobs = self.obtenir_dades_sectors(self.URL_BASE)
+        new_jobs = self.get_new_jobs(jobs)
+        print(f"Hem trobat {len(jobs)} feines, de les quals {len(new_jobs)} són noves.")
+        self.update_new_jobs(new_jobs)
+        self.feines = self.feines + jobs
+        self.feines_noves = self.feines_noves + new_jobs
+        print(f"feines noves: {self.feines_noves}")
+        print(f"feines antigues: {[feina for feina in self.feines if feina not in self.feines_noves]}")
+        if len(self.feines_noves) > 0:
+            self.send_new_jobs()
+
+    def transformar_link(self, link):
+        return self.URL_PATH + link
+
+
 
 if __name__ == "__main__":
     #test
-    js = BarcelonaActiva()
-    js.get_jobs()
+    # js = BarcelonaActiva()
+    # js.get_jobs()
 
-    cido = CIDO_DIBA()
-    cido.get_jobs()
+    # cido = CIDO_DIBA()
+    # cido.get_jobs()
+
+    tv3 = TV3()
+    tv3.get_jobs()
